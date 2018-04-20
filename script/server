@@ -1,7 +1,6 @@
 #!/usr/bin/env node
 
 var port = Number(process.argv[2] || 3000)
-
 var fs = require('fs')
 var http = require('http');
 var url = require('url');
@@ -79,6 +78,12 @@ var routes = {
   '/empty': function(res) {
     res.writeHead(204);
     res.end();
+  },
+  '/slow': function(res) {
+    setTimeout(function() {
+      res.writeHead(200);
+      res.end();
+    }, 100);
   },
   '/error': function(res) {
     res.destroy();

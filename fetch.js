@@ -323,6 +323,7 @@
       }
       this.method = input.method
       this.mode = input.mode
+      this.signal = input.signal
       if (!body && input._bodyInit != null) {
         body = input._bodyInit
         input.bodyUsed = true
@@ -337,6 +338,7 @@
     }
     this.method = normalizeMethod(options.method || this.method || 'GET')
     this.mode = options.mode || this.mode || null
+    this.signal = options.signal || this.signal
     this.referrer = null
 
     if ((this.method === 'GET' || this.method === 'HEAD') && body) {
@@ -421,6 +423,20 @@
     return new Response(null, {status: status, headers: {location: url}})
   }
 
+  var DOMException = self.DOMException
+  try {
+    new DOMException()
+  } catch(err) {
+    DOMException = function(message, name) {
+      this.message = message
+      this.name = name
+      var error = Error(message)
+      this.stack = error.stack
+    }
+    DOMException.prototype = Object.create(Error.prototype)
+    DOMException.prototype.constructor = DOMException
+  }
+
   exports.Headers = Headers
   exports.Request = Request
   exports.Response = Response
@@ -428,7 +444,16 @@
   exports.fetch = function(input, init) {
     return new Promise(function(resolve, reject) {
       var request = new Request(input, init)
+
+      if (request.signal && request.signal.aborted) {
+        return reject(new DOMException('Aborted', 'AbortError'))
+      }
+
       var xhr = new XMLHttpRequest()
+
+      function abortXhr() {
+        xhr.abort()
+      }
 
       xhr.onload = function() {
         var options = {
@@ -449,6 +474,10 @@
         reject(new TypeError('Network request failed'))
       }
 
+      xhr.onabort = function() {
+        reject(new DOMException('Aborted', 'AbortError'))
+      }
+
       xhr.open(request.method, request.url, true)
 
       if (request.credentials === 'include') {
@@ -464,6 +493,17 @@
       request.headers.forEach(function(value, name) {
         xhr.setRequestHeader(name, value)
       })
+
+      if (request.signal) {
+        request.signal.addEventListener('abort', abortXhr)
+
+        xhr.onreadystatechange = function() {
+          // DONE (success or failure)
+          if (xhr.readyState === 4) {
+            request.signal.removeEventListener('abort', abortXhr)
+          }
+        }
+      }
 
       xhr.send(typeof request._bodyInit === 'undefined' ? null : request._bodyInit)
     })
