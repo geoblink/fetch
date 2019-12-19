@@ -1,9 +1,9 @@
 {
-  "name": "whatwg-fetch",
+  "name": "@geoblink/whatwg-fetch",
   "description": "A window.fetch polyfill.",
   "version": "2.0.4",
   "main": "fetch.js",
-  "repository": "github/fetch",
+  "repository": "geoblink/fetch",
   "license": "MIT",
   "devDependencies": {
     "abortcontroller-polyfill": "1.1.2",
